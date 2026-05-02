@@ -3,10 +3,94 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body { font-family: Arial; padding: 20px; background: #f5f5f5; }
-.card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 10px; }
-input { width: 100%; padding: 10px; }
-button { width: 100%; padding: 10px; margin-top: 10px; }
+body {
+  font-family: Arial;
+  padding: 20px;
+  background: #f5f5f5;
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.amount {
+  font-size: 16px;
+  margin: 5px 0;
+}
+
+.metode {
+  font-size: 14px;
+  color: gray;
+}
+
+/* tombol bayar */
+.btn-bayar {
+  width: 100%;
+  padding: 12px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+/* status lunas */
+.lunas {
+  margin-top: 10px;
+  color: green;
+  font-weight: bold;
+}
+
+/* input */
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+/* modal */
+.modal {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background: white;
+  margin: 20% auto;
+  padding: 20px;
+  width: 80%;
+  border-radius: 10px;
+}
+
+.metode-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  border: none;
+  border-radius: 6px;
+  background: #eee;
+}
 </style>
 </head>
 
@@ -14,17 +98,27 @@ button { width: 100%; padding: 10px; margin-top: 10px; }
 
 <h2>💰 Bill Tracker</h2>
 
-<div class="card" id="list"></div>
+<div id="list"></div>
 
-<input id="msg" placeholder="contoh: tambah BRI 3 juta bca">
-<button onclick="kirim()">Kirim</button>
+<input id="msg" placeholder="contoh: tambah BRI 3 juta">
+<button onclick="kirim()">Tambah</button>
+
+<!-- MODAL -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <h3>Pilih Metode</h3>
+    <div id="metodeList"></div>
+  </div>
+</div>
 
 <script>
-const URL = "https://script.google.com/macros/s/AKfycbz7I2DKVqdk7Xq3kFDvyboEhHUkemV0AcA_TFgm8axiwC9cLr-TVM1y_WMX-ITW30ox/exec";
+const URL = "https://script.google.com/macros/s/AKfycbz7I2DKVqdk7Xq3kFDvyboEhHUkemV0AcA_Tfgm8axiwC9cLr-TVM1y_WMX-ITW30ox/exec";
+
+let selectedNama = "";
 
 // format rupiah
 function rupiah(n) {
-  return "Rp " + n.toLocaleString("id-ID");
+  return "Rp " + Number(n).toLocaleString("id-ID");
 }
 
 // load data
@@ -37,10 +131,20 @@ function loadData() {
 
       data.forEach(item => {
         const div = document.createElement("div");
+        div.className = "card";
 
         div.innerHTML = `
-          ${item.nama} - ${rupiah(item.nominal)} (${item.metode})
-          <button onclick="bayar('${item.nama}')">✔</button>
+          <div class="title">${item.nama}</div>
+          <div class="amount">${rupiah(item.nominal)}</div>
+          <div class="metode">${item.metode !== "-" ? item.metode : ""}</div>
+          
+          ${item.status !== "lunas" ? `
+            <button class="btn-bayar" onclick="bukaModal('${item.nama}')">
+              ✔ Bayar
+            </button>
+          ` : `
+            <div class="lunas">✔ Lunas</div>
+          `}
         `;
 
         list.appendChild(div);
@@ -48,24 +152,67 @@ function loadData() {
     });
 }
 
-// kirim input
+// kirim tambah tagihan
 function kirim() {
   const msg = document.getElementById("msg").value;
 
   fetch(URL, {
     method: "POST",
     body: JSON.stringify({ message: msg })
-  }).then(loadData);
+  })
+  .then(() => {
+    document.getElementById("msg").value = "";
+    loadData();
+  });
 }
 
-// bayar
-function bayar(nama) {
+// buka modal metode
+function bukaModal(nama) {
+  selectedNama = nama;
+
+  const metodeList = ["BCA", "BRI", "BNI", "Mandiri", "Dana", "Lainnya"];
+  const container = document.getElementById("metodeList");
+
+  container.innerHTML = "";
+
+  metodeList.forEach(m => {
+    const btn = document.createElement("button");
+    btn.className = "metode-btn";
+    btn.innerText = m;
+
+    btn.onclick = function() {
+      pilihMetode(m);
+    };
+
+    container.appendChild(btn);
+  });
+
+  document.getElementById("modal").style.display = "block";
+}
+
+// pilih metode
+function pilihMetode(metode) {
   fetch(URL, {
     method: "POST",
-    body: JSON.stringify({ message: "bayar " + nama })
-  }).then(loadData);
+    body: JSON.stringify({
+      message: "bayar " + selectedNama + " " + metode
+    })
+  })
+  .then(() => {
+    document.getElementById("modal").style.display = "none";
+    loadData();
+  });
 }
 
+// klik luar modal = tutup
+window.onclick = function(event) {
+  const modal = document.getElementById("modal");
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
+
+// load awal
 loadData();
 </script>
 
