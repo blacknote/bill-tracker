@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+.card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 10px; }
+input { width: 100%; padding: 10px; }
+button { width: 100%; padding: 10px; margin-top: 10px; }
+</style>
+</head>
+
+<body>
+
+<h2>💰 Bill Tracker</h2>
+
+<div class="card" id="list"></div>
+
+<input id="msg" placeholder="contoh: tambah BRI 3 juta bca">
+<button onclick="kirim()">Kirim</button>
+
+<script>
+const URL = "https://script.google.com/macros/s/AKfycbz7I2DKVqdk7Xq3kFDvyboEhHUkemV0AcA_TFgm8axiwC9cLr-TVM1y_WMX-ITW30ox/exec";
+
+// format rupiah
+function rupiah(n) {
+  return "Rp " + n.toLocaleString("id-ID");
+}
+
+// load data
+function loadData() {
+  fetch(URL + "?action=get")
+    .then(res => res.json())
+    .then(data => {
+      const list = document.getElementById("list");
+      list.innerHTML = "";
+
+      data.forEach(item => {
+        const div = document.createElement("div");
+
+        div.innerHTML = `
+          ${item.nama} - ${rupiah(item.nominal)} (${item.metode})
+          <button onclick="bayar('${item.nama}')">✔</button>
+        `;
+
+        list.appendChild(div);
+      });
+    });
+}
+
+// kirim input
+function kirim() {
+  const msg = document.getElementById("msg").value;
+
+  fetch(URL, {
+    method: "POST",
+    body: JSON.stringify({ message: msg })
+  }).then(loadData);
+}
+
+// bayar
+function bayar(nama) {
+  fetch(URL, {
+    method: "POST",
+    body: JSON.stringify({ message: "bayar " + nama })
+  }).then(loadData);
+}
+
+loadData();
+</script>
+
+</body>
+</html>
